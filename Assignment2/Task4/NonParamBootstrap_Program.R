@@ -1,0 +1,76 @@
+par(mfrow=c(1,2))
+curve(lambda*exp(-2*lambda),
+      from = 0, to = 3, n = 1000,
+      xname = "lambda", ylab = "L(lambda|y = 2)",
+      main = "Likelihood given y = 2")
+curve(log(lambda*exp(-2*lambda)),
+      from = 0, to = 3, n = 1000,
+      xname = "lambda", ylab = "l(lambda|y = 2)",
+      main = "Log-Likelihood given y = 2")
+
+
+#plotting sequences
+y <- seq(from = 0.5, to = 3, by = 0.05)
+lambda <- c(seq(from = 0.05, to = 1/y[length(y)], by = 0.05), 
+            1/y, 
+            seq(from = 1/y[1], to = 3, by = 0.05))
+#create density function
+fylambda <- function(y, lambda){lambda*exp(-lambda*y)}
+#grid of points to plot Likelihood or density over
+grid <- expand.grid(lambda, y)
+#plotting data
+plotData <- data.frame(lambda = grid$Var1,
+                       y = grid$Var2,
+                       likelihood = fylambda(lambda=grid$Var1,y=grid$Var2))
+plotData$color <- ifelse(plotData$lambda == 1/plotData$y, "red", "blue")
+#static plot
+scatterplot3d::scatterplot3d(y = plotData$lambda,
+                             x = plotData$y,
+                             z = plotData$likelihood, 
+                             color = plotData$color,
+                             pch = 16, box = TRUE, #highlight.3d = TRUE, 
+                             type = "p", 
+                             main = "Likelihood/PDF as a function of both y and lambda\n
+              Maximums for a given y are highlighted in red",
+                             angle = 40,
+                             ylab = "lambda",
+                             xlab = "y",
+                             zlab ="Likelihood/PDF")
+
+
+par(mfrow = c(1,3))
+lambda <- 0.25
+y <- seq(from =0.1, to = 4, by = 0.05)
+plot(x = y,
+     y = lambda*exp(-y*lambda),
+     ylab = paste0("f(y|lambda = ", lambda, ")"),
+     xlab = "y",
+     main = paste0("P(1.9<Y<2.1) = ", round(pexp(2.1, rate = lambda) - pexp(1.9, rate = lambda), 4), "\nwhen lambda = ", lambda),
+     type = "l",
+     ylim = c(0,0.9),
+     lwd = 2)
+epsilon <- 0.1
+y2 <- seq(from = 2-epsilon, to = 2+epsilon, length = 100)
+polygon(x = c(y2, rev(y2)), y = c(lambda*exp(-y2*lambda), rep(0, length(y2))), col = "blue")
+
+lambda <- 0.5
+plot(x = y,
+     y = lambda*exp(-y*lambda),
+     ylab = paste0("f(y|lambda = ", lambda, ")"),
+     xlab = "y",
+     main = paste0("P(1.9<Y<2.1) = ", round(pexp(2.1, rate = lambda) - pexp(1.9, rate = lambda), 4), "\nwhen lambda = ", lambda),
+     type = "l",
+     ylim = c(0,0.9),
+     lwd = 2)
+polygon(x = c(y2, rev(y2)), y = c(lambda*exp(-y2*lambda), rep(0, length(y2))), col = "blue")
+
+lambda <- 1
+plot(x = y,
+     y = lambda*exp(-y*lambda),
+     ylab = paste0("f(y|lambda = ", lambda, ")"),
+     xlab = "y",
+     main = paste0("P(1.9<Y<2.1) = ", round(pexp(2.1, rate = lambda) - pexp(1.9, rate = lambda), 4), "\nwhen lambda = ", lambda),
+     type = "l",
+     ylim = c(0,0.9),
+     lwd = 2)
+polygon(x = c(y2, rev(y2)), y = c(lambda*exp(-y2*lambda), rep(0, length(y2))), col = "blue")

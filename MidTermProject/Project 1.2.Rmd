@@ -1,0 +1,507 @@
+---
+title: "ST502 Project 1"
+author: 'Group E: Saurabh Gupta, Franklin Zhou'
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Introduction
+
+Our goal of this project is to compare different confidence interval procedures that attempt to capture the $p$, the true probability in a binomial distribution.
+
+
+## Methods
+
+In this project, we compare the performance of six methods with different combination of sample size $n$ and probability $p$. These six methods are:
+
+- Wald interval
+
+- Adjusted Wald interval 
+
+- Clopper-Pearson (exact) interval
+
+- Score interval
+
+- Raw percentile interval using a parametric bootstrap
+
+- Bootstrap t interval using a parametric bootstrap
+
+
+### Wald interval function
+
+The formula of calculating Wald interval is:
+
+$$
+\hat{p} - z_{1-\frac{\alpha}{2}}\sqrt{\frac{\hat{p}(1-\hat{p})}{n}} < p < \hat{p} + z_{1-\frac{\alpha}{2}}\sqrt{\frac{\hat{p}(1-\hat{p})}{n}},
+$$
+where the $z_c$ denotes the $c$ quantile of the standard normal distribution. 
+
+To calculate the Wald interval for $p$, we need to use sample's probability $\hat{p}$, sample size $n$ and the confidence level $1-\alpha$. The function of calculating Wald Interval is given below:
+
+```{r}
+WaldCI <- function(y, n, alpha = 0.05){
+  p_hat = y/n  # Estimate of the probability of success
+  # Return lower and upper bound of Wald CI
+  c("wald ci lower" = p_hat - qnorm(1-alpha/2)*sqrt((p_hat*(1-p_hat))/n),
+    "wald ci upper" = p_hat + qnorm(1-alpha/2)*sqrt((p_hat*(1-p_hat))/n))
+}
+```
+
+In this project, we use $\alpha = 0.05$ as default in all calculation.
+
+
+### Adjusted Wald interval function
+
+To overcome the poor performance of Wald interval, adjusted Wald interval was proposed. The formula of adjusted Wald interval is almost the same as Wald interval, except that we add 2 successes and 2 failures to the sample data set:
+
+$$
+\tilde{p} - z_{1-\frac{\alpha}{2}}\sqrt{\frac{\tilde{p}(1-\tilde{p})}{n}} < p < \tilde{p} + z_{1-\frac{\alpha}{2}}\sqrt{\frac{\tilde{p}(1-\tilde{p})}{n}},
+$$
+where $\tilde{p} = (Y+2)/(n+4)$.
+
+The function of calculating adjusted Wald Interval is given below:
+
+```{r}
+AdjWaldCI <- function(y, n, alpha = 0.05){
+  p_tilde = (y+2)/(n+4)  # Adjusted estimate of probability of success
+  # Return lower and upper bound of Adjusted Wald CI
+  c("adj wald ci lower" = p_tilde - qnorm(1-alpha/2)*sqrt((p_tilde*(1-p_tilde))/n),
+    "adj wald ci upper" = p_tilde + qnorm(1-alpha/2)*sqrt((p_tilde*(1-p_tilde))/n))
+}
+```
+
+
+### Clopper-Pearson (exact) interval function
+
+Clopper-Pearson interval is referred to as "exact" interval. This interval is guaranteed to have coverage probability of at least $1 - \alpha$ for every value of $p$. When $y = 1,2, \cdots , n - 1$, the confidence interval is:
+
+$$
+\left[ 1 + \frac{n-y+1}{yF_{2y,2(n-y+1),\frac{\alpha}{2}}} \right]^{-1} < p < \left[ 1 + \frac{n-y}{(y+1)F_{2(y+1),2(n-y),1-\frac{\alpha}{2}}} \right]^{-1},
+$$
+
+where the $F_{a,b,c}$ denotes the $c$ quantile from the F distribution with degrees of freedom $a$ and $b$. 
+
+When $y = 0$, we set the interval to be $[0,0]$ and When $y = n$, we set the interval to be $[1,1]$. The function of calculating Clopper-Pearson interval is given below:
+
+```{r}
+ClopperPearsonCI <- function(y, n, alpha = 0.05){
+  # Handle special cases where y is 0 or y equals n
+  if (y==0){
+    c("C-P interval lower" = 0, 
+      "C-P interval upper" = 0)
+    } else if (y==n){
+      c("C-P interval lower" = 1, 
+        "C-P interval upper" = 1)
+    } else {
+      # General case for Clopper-Pearson CI using F-distribution
+  c("C-P interval lower" = 1 / (1 + ((n-y+1) / (y * qf(alpha/2, 2*y, 2*(n-y+1))))), 
+    "C-P interval upper" = 1 / (1 + ((n-y) / ((y+1) * qf(1-(alpha/2), 2*(y+1), 2*(n-y))))))
+    }
+}
+```
+
+
+
+### Score interval function
+
+Score interval can be used with almost all sample sizes and $p$ values. The formula is given below:
+
+$$
+\frac{\hat{p}+\frac{z_{1-\frac{\alpha}{2}}^2}{2n}-z_{1-\frac{\alpha}{2}}\sqrt{\frac{\hat{p}(1-\hat{p}) + \frac{z_{1-\frac{\alpha}{2}}^2}{4n}}{n}}}{1+\frac{z_{1-\frac{\alpha}{2}}^2}{n}} < p < \frac{\hat{p}+\frac{z_{1-\frac{\alpha}{2}}^2}{2n}+z_{1-\frac{\alpha}{2}}\sqrt{\frac{\hat{p}(1-\hat{p}) + \frac{z_{1-\frac{\alpha}{2}}^2}{4n}}{n}}}{1+\frac{z_{1-\frac{\alpha}{2}}^2}{n}},
+$$
+
+where the $z_c$ denotes the $c$ quantile of the standard normal distribution.
+
+And the function of calculating Score interval is given below:
+
+```{r}
+ScoreCI <- function(y, n, alpha = 0.05){
+  p_hat = y/n # Estimate of probability of success
+  z = qnorm(1-alpha/2) # Z-score for the desired confidence level
+  # Return lower and upper bound of Score CI
+  c("Score interval lower" = 
+      (p_hat + z^2/(2*n) - z*sqrt((p_hat*(1-p_hat) + z^2/(4*n))/n)) / (1 + z^2/n),
+    "Score interval upper" = 
+      (p_hat + z^2/(2*n) + z*sqrt((p_hat*(1-p_hat) + z^2/(4*n))/n)) / (1 + z^2/n))
+}
+```
+
+
+### Raw percentile interval and Bootstrap t interval function (both using a parametric bootstrap)
+
+- To find the Raw percentile interval, we just need to find the $\frac{\alpha}{2}$ quantile and the $1-\frac{\alpha}{2}$ quantile of the $\hat{p}$ of samples.
+
+$$
+\hat{p}_{\frac{\alpha}{2}} < p < \hat{p}_{1-\frac{\alpha}{2}} 
+$$
+
+where the $\hat{p}_{c}$ denotes the $c$ quantile of the proportion of the samples.
+
+
+- To find the Bootstrap t interval, we use following steps:
+
+1. Calculate the mean of our sample's $\hat{p}$ to generate bootstrapped $\hat{p}_{boot}$, 
+
+2. Use the mean of bootstrapped $\hat{p}_{boot}$ to generate secondary bootstrapped $\hat{p}_{boot2}$,
+
+3. Use secondary bootstrapped $\hat{p}_{boot2}$ to find the estimated standard error of $\hat{p}_{boot}$,
+
+4. Calculate the interval based on formula.
+
+$$
+\hat{p} - t_{1-{\frac{\alpha}{2}}}\cdot \hat{SE} < p < \hat{p} - t_{\frac{\alpha}{2}}\cdot \hat{SE}
+$$
+
+where the $t_{c}$ denotes the $c$ quantile of the bootstrapped t values, and
+
+$$
+T = \frac{\underset{\sim}{\hat{p}}-p}{\underset{\sim}{\hat{SE}}(\underset{\sim}{\hat{p}})}
+$$
+
+The function of finding Raw percentile interval and Bootstrap t interval is given below:
+
+```{r}
+BootstrapCI <- function(x, n, size, B, alpha = 0.05){
+ 
+   # Special case handling when x = 0 or x = size
+  if (x == 0) {
+    return(c(0, 0, 0, 0))  # Raw and t-bootstrap intervals set to [0, 0]
+  } else if (x == size) {
+    return(c(1, 1, 1, 1))  # Raw and t-bootstrap intervals set to [1, 1]
+  } else {
+    sample_p <- x/size # Estimate proportion
+    
+  # Calculate raw percentile interval from bootstrap samples
+  raw_lower <- quantile(sample_p, alpha / 2, na.rm = TRUE)
+  raw_upper <- quantile(sample_p, 1 - alpha / 2, na.rm = TRUE)
+  raw_interval <- c(raw_lower, raw_upper)
+  
+  # Bootstrap t interval calculations
+  p_hat <- mean(sample_p)
+  boot_estimates <- replicate(B, {
+    sim_data <- rbinom(n, size, prob = p_hat)  # Generate bootstrap sample
+    p_hat_boot <- mean(sim_data / size)  # Bootstrap estimate of proportion
+    
+    # Perform secondary bootstrap for standard error estimation
+    B2 <- 50
+    secondary_boot <- replicate(B2, {
+      sim_data2 <- rbinom(n, size, prob = p_hat_boot)  # Second bootstrap sample
+      p_hat_boot2 <- mean(sim_data2 / size)  # Bootstrap estimate
+      return(p_hat_boot2)
+    })
+    
+    estimated_SE_p_hat_boot <- sd(secondary_boot)  # Standard error
+    if (estimated_SE_p_hat_boot == 0) return(NA)  # Handle division by zero
+    
+    # Calculate t-statistic
+    p_boot_t <- (p_hat_boot - p_hat) / estimated_SE_p_hat_boot
+    return(p_boot_t)
+  })
+  
+  # Calculate the t-bootstrap intervals using quantiles
+  boot_t_interval <- c(p_hat - quantile(boot_estimates, 1 - alpha / 2, na.rm = TRUE) * sd(boot_estimates),
+                       p_hat - quantile(boot_estimates, alpha / 2, na.rm = TRUE) * sd(boot_estimates))
+  
+  # Return both raw percentile and t-bootstrap intervals
+  return(c(raw_interval, boot_t_interval))
+  }
+}
+```
+
+
+## Creation of data
+
+We generated $N = 1000$ random samples from a binomial where sample size $n$ varies across 15, 30, to 100 and true proportion $p$ varies from 0.01 to 0.99 (15 total values of p). 
+
+```{r}
+# Set values
+N <- 1000 # Number of random samples
+n <- c(15, 30, 100) # Values of n
+p <- seq(0.01, 0.99, length.out = 15) # Values of p
+B <- 100 # Number of bootstrap resamples
+
+# Function to generate random binomial sample data for each combination of n and p
+GetData <- function(n_vals, p_vals, N = 1000) { 
+  sample_data <- list()  # Initialize a list to store sample data
+  for (n in n_vals) {
+    for (p in p_vals) {
+      samples <- rbinom(N, size = n, prob = p)  # Generate N binomial samples
+      col_name <- paste0("n", n, "p", p)  # Create column name for the dataset
+      sample_data[[col_name]] <- samples  # Store samples in the list
+    }
+  }
+  return(sample_data)
+}
+sample_data <- GetData(n, p, N)
+
+```
+
+
+## Execute the Monte Carlo simulation
+
+```{r, warning=FALSE, message=FALSE}
+# Load necessary libraries
+library(tidyverse)
+library(plotrix)
+library(ggplot2)
+library(gridExtra)  # For arranging multiple ggplots
+```
+
+First, we created several functions to get different piece of the results:
+
+```{r}
+# Function to calculate metrics such as coverage probability, average length, and errors
+calculate_metrics <- function(cis, mu, ci_method, n, p) {
+  probability <- mean(cis[, 1] <= mu & cis[, 2] >= mu)  # Coverage probability
+  avg_length <- mean(cis[, 2] - cis[, 1])  # Average length of confidence intervals
+  ci_length <- cis[, 2] - cis[, 1]  # Calculate individual lengths
+  se_value <- sd(ci_length) / sqrt(length(ci_length))  # Standard error of lengths
+  se_length <- round(se_value, 4)  # Round to 4 decimals
+  err_below <- mean(cis[, 2] < mu)  # Error when CI is below true value
+  err_above <- mean(cis[, 1] > mu)  # Error when CI is above true value
+  
+  # Return a data frame with the metrics
+  data.frame(
+    n = n,
+    p = p,
+    ci_method = ci_method,
+    prob = probability,
+    avg_length = avg_length,
+    se_length = se_length,
+    err_below = err_below,
+    err_above = err_above
+  )
+}
+
+# Function to assign color based on whether the true parameter is within the CI
+mycolor <- function(endpoints, mu) {
+  if (is.na(endpoints[1]) || is.na(endpoints[2])) {
+    return("Black")  # Default color if CI endpoints are NA
+  } else if (mu < endpoints[1]) {
+    return("Red")  # True value is below the CI
+  } else if (mu > endpoints[2]) {
+    return("Orange")  # True value is above the CI
+  } else {
+    return("Black")  # True value lies within the CI
+  }
+}
+
+# Function to plot the CIs for each method and sample
+plot_CIs <- function(n, p, observed_CIs, ci_name, mu, N = 100) {
+  # Plot the confidence intervals for N samples
+  plotCI(x = 1:N, 
+         y = rowMeans(observed_CIs[1:N, ]),  # Mean of CIs for each sample
+         li = observed_CIs[1:N, 1],  # Lower CI bound
+         ui = observed_CIs[1:N, 2],  # Upper CI bound
+         col = apply(FUN = mycolor, X = observed_CIs[1:N, ], MARGIN = 1, mu = mu),  # Assign color
+         ylab = "Estimated Probability (p)", 
+         xlab = "Sampled Data Set", 
+         main = paste0("Visualization of 1000 ", ci_name, " CIs for n = ", n, " and p = ", p, 
+                       "\nProportion containing true p = ", 
+                       mean((observed_CIs[1:N, 1] < mu) & 
+                              (observed_CIs[1:N, 2] > mu))),
+         pch = 20)
+  
+  abline(h = mu, lwd = 2, col = "blue")  # Draw a line for the true value of p
+}
+
+# Function to simulate and store metrics for different CI methods
+simulate_CIs <- function(n_vals, p_vals, ci_function, ci_name, sample_data, N = 1000, alpha = 0.05) {
+  results <- data.frame()  
+  coverage_results <- data.frame()  # To store the coverage probabilities
+  # Simulate for each combination of n and p
+  for (n in n_vals) {
+    for (p in p_vals) {
+      # Store the true probability for plotting
+      mu <- p  
+      col_name <- paste0("n", n, "p", p)
+      samples <- sample_data[[col_name]]  
+      
+      # Compute confidence intervals for each sample
+      #samples: This is a vector or list of binomial samples where each entry is a 
+      #     number of successes (y), given the sample size (n).
+      #ci_function: This is the confidence interval function being applied (WaldCI, AdjWaldCI, etc.),which takes 
+      #     the number of successes (y) and the sample size (n) as input to compute the confidence intervals.
+      #sapply: This function applies ci_function to each element in samples, iterating over 
+      #     each sample (y) to compute the corresponding confidence interval.
+      #t: Transposes the result of sapply, ensuring that each computed confidence interval 
+      #     is placed in its own row, with the lower and upper bounds as separate columns.
+      cis <- t(sapply(samples, function(y) ci_function(y, n)))
+      
+      # Calculate the metrics and create a data frame
+      metrics_df <- calculate_metrics(cis, mu, ci_name, n, p)
+      
+      # Append the result in overall results data frame
+      results <- rbind(results, metrics_df)
+      
+      # Plot the CIs 
+      if (p == 0.99) {
+        plot_CIs(n, p, cis, ci_name, mu, N)
+      }
+    }
+  }
+  return(results)  
+}
+
+simulate_BootstrapCIs <- function(n_vals, p_vals, ci_function, ci_name, sample_data, N = 1000 , B, alpha = 0.05) {
+  results <- data.frame()  
+  # Simulate for each combination of n and p
+  for (n in n_vals) {
+    for (p in p_vals) {
+      mu <- p  # Store the true probability for plotting
+      col_name <- paste0("n", n, "p", p)
+      samples <- sample_data[[col_name]]  # Extract the sample data for this n and p
+      
+      # Compute confidence intervals using the BootstrapCI function
+      cis <- t(sapply(samples, function(y) ci_function(y, n, size = n, B, alpha = alpha)))
+      
+      # Extract raw percentile and bootstrap t intervals from cis
+      cis_raw <- cis[, 1:2]  # First two columns are raw_percentile
+      cis_boot_t <- cis[, 3:4]  # Last two columns are boot_t_interval
+      
+      # Calculate the metrics for the percentile intervals
+      raw_metrics <- calculate_metrics(cis_raw, mu, paste0(ci_name, " Raw"), n, p)
+      results <- rbind(results, raw_metrics)
+      
+      # Calculate the metrics for the t intervals
+      boot_t_metrics <- calculate_metrics(cis_boot_t, mu, paste0(ci_name, " t"), n, p)
+      results <- rbind(results, boot_t_metrics)
+    }
+  }
+  return(results)
+}
+```
+
+Then we run the simulations:
+
+```{r}
+# Simulate CI intervals and metrices
+wald_metrics <- simulate_CIs(n, p, WaldCI, "Wald", sample_data,N)
+adj_wald_metrics <- simulate_CIs(n, p, AdjWaldCI, "Adjusted Wald", sample_data, N)
+clopper_pearson_metrics <- simulate_CIs(n, p, ClopperPearsonCI, "Clopper-Pearson", sample_data, N)
+score_metrics <- simulate_CIs(n, p, ScoreCI, "Score", sample_data, N)
+bootstrap_metrics <- simulate_BootstrapCIs(n , p, BootstrapCI, "Bootstrap", sample_data, N, B)
+
+# Filter out metrics specifically for the Bootstrap t-interval and Bootstrap raw percentile method
+bootstrap_t_metrics <- bootstrap_metrics %>% filter(ci_method == "Bootstrap t")
+bootstrap_raw_metrics <- bootstrap_metrics %>% filter(ci_method == "Bootstrap Raw")
+
+# Combine all results 
+all_metrics_combined <- rbind(wald_metrics, adj_wald_metrics, clopper_pearson_metrics, score_metrics, bootstrap_t_metrics, bootstrap_raw_metrics)
+
+# Sort the combined data frame by ci_method
+all_metrics_combined <- all_metrics_combined[order(all_metrics_combined$ci_method), ]
+print(all_metrics_combined)
+
+
+# Create individual plots for each CI method and value of n
+plot_probability <- function(metrics_data, method_name) {
+  ggplot(metrics_data %>% filter(ci_method == method_name), 
+         aes(x = p, y = prob)) +
+    # Plot the coverage probability as a line plot
+    geom_line(color = "blue") + 
+    facet_wrap(~n, ncol = 1) + # Create separate panels (facets) for each value of 'n'
+    # Set plot labels including title, x-axis, and y-axis
+    labs(
+      title = paste("Probability:", method_name),
+      x = "p", # X-axis label (values of 'p')
+      y = "Coverage Probability" # Y-axis label
+    ) +
+    # Add a reference horizontal line at 0.95 to indicate the nominal coverage level
+    geom_hline(yintercept = 0.95, linetype = "dashed", color = "red") +  # Add 95% reference line
+    theme_minimal() +  # Minimal theme for clean look
+    # Set y-axis limits to maintain consistency across plots
+    ylim(0.7, 1.0)  # Coverage probabilities between 0.7 and 1.0
+}
+
+# Generate plots for each CI method using the combined metrics data
+wald_plot <- plot_probability(all_metrics_combined, "Wald")
+adj_wald_plot <- plot_probability(all_metrics_combined, "Adjusted Wald")
+exact_plot <- plot_probability(all_metrics_combined, "Clopper-Pearson")
+score_plot <- plot_probability(all_metrics_combined, "Score")
+bootstrap_raw_plot <- plot_probability(all_metrics_combined, "Bootstrap Raw")
+bootstrap_t_plot <- plot_probability(all_metrics_combined, "Bootstrap t")  
+
+# Arrange the generated plots in a grid format with 3 columns
+# The grid.arrange function displays multiple plots together
+grid.arrange(wald_plot, adj_wald_plot, exact_plot, score_plot, bootstrap_raw_plot,bootstrap_t_plot,  ncol = 3)
+
+```
+
+
+## Results of the simulation
+
+## Conclusion
+
+
+### Wald Method
+
+- Coverage
+
+The Wald method shows under-coverage at extreme p values. At p=0.01 and p=0.99, where the probabilities are significantly lower than the target 95%. This indicates that the Wald intervals are too narrow, especially for small n.
+
+- Conclusion
+
+This method is unreliable, especially for small sample sizes and extreme p values. It produces intervals that are too narrow, leading to under-coverage.
+
+
+### Adjusted Wald Method
+
+- Coverage
+
+The Adjusted Wald method generally shows better coverage than the regular Wald method, especially at extreme p values like 0.01 and 0.99. For example, at n=100, p=0.99, the Adjusted Wald method achieves nearly 99% coverage.
+
+- Conclusion
+
+This is an improved version of the Wald method and provides better coverage, especially for extreme p values. However, its intervals are longer than the regular Wald intervals.
+
+
+### Clopper-Pearson (Exact) Method
+
+- Coverage
+
+The Clopper-Pearson method consistently has low coverage at mid-range p values (e.g., p=0.5), indicating that it produces overly conservative (narrow) intervals. Coverage values range from 0.492 to 0.584, significantly lower than 0.95.
+
+- Conclusion
+
+While this method is conservative, it tends to under-cover at mid-range probabilities. Its overly conservative intervals result in poor performance at p=0.5.
+
+
+### Score Method
+
+- Coverage
+
+The Score method achieves better coverage than the Wald method, particularly for moderate p values like 0.255 and 0.745, where it consistently reaches coverage near 0.96 or above. It also handles extreme p values better than Wald.
+
+- Conclusion
+
+The Score method is one of the most reliable methods, providing good coverage and reasonable interval lengths. It performs well across different sample sizes and probabilities.
+
+
+### Bootstrap Raw Percentile Method
+
+- Coverage
+
+The Bootstrap Raw Percentile method mostly fails to provide sufficient coverage, especially for small sample sizes. For n=15 and n=30, it returns zero intervals for many p values, which suggest that it fail to estimate bounds effectively.
+
+- Conclusion
+
+This method is unreliable, especially for smaller sample sizes.
+
+
+### Bootstrap t Method
+
+- Coverage
+
+The Bootstrap t method shows excellent coverage for moderate p values and larger sample sizes (ex., p=0.255/0.5/0.745 with n=100), with coverage reaching 1.0.
+
+- Conclusion
+
+This method performs well for moderate p values and larger sample sizes but tends to produce excessively wide intervals, leading to over-coverage in some cases.
+
+For balanced performance across a variety of sample sizes and p values, the Score method appears to be the most reliable, while the Bootstrap t method may be useful for larger samples if more conservative intervals are desired.

@@ -1,0 +1,89 @@
+---
+title: "MLE_program1"
+format: pdf
+editor: visual
+---
+
+```{r}
+#install.packages("scatterplot3d") # Install
+```
+
+```{r}
+#Likelihood for a geom(p) RS is
+likelihood <- function(p, sumy, n){
+  ((p/(1-p))^n)*(1-p)^sumy
+}
+
+#logLikelihood for geom(p) RS is
+loglikelihood <- function(p, sumy, n){
+  n*log(p)-n*log(1-p)+sumy*log(1-p)
+}
+
+#Create plots for likelihood and loglikelihood for some different values of sumy
+par(mfrow=c(1,2))
+
+#create plots
+sumy <- 20
+n <- 10
+curve(likelihood(p, sumy = sumy, n = n),
+      xname = "p",
+      main = paste("Geom(p) Likelihood\nsumy = ",sumy,", n = ",n),
+      ylab = "L(p|y's)",
+      from = 0,
+      to = 1)
+abline(v = 1/(sumy/n),
+       lwd = 2,
+       col = "blue")
+text(x = 0.7,
+     y = likelihood(0.6, sumy, n),
+     paste0("MLE occurs at ", signif(n/sumy, 4)), 
+     cex = 0.8
+)
+
+curve(loglikelihood(p, sumy = sumy, n = n), 
+      xname = "p", 
+      main = paste("Geom(p) Loglikelihood\nsumy = ",sumy,", n = ",n),
+      ylab = "ln(L(p|y's))",
+      from = 0, to = 1)
+abline(v = 1/(sumy/n),
+       lwd = 2,
+       col = "blue")
+text(x = 0.7,
+     y = loglikelihood(0.9, sumy, n),
+     paste0("MLE occurs at ", signif(n/sumy,4)),
+     cex = 0.8)
+
+
+#Create plots for likelihood and loglikelihood for some different values of sumy
+par(mfrow=c(1,2))
+
+#create plots
+sumy <- 70
+n <- 10
+curve(likelihood(p, sumy = sumy, n = n),
+      xname = "p",
+      main = paste("Geom(p) Likelihood\nsumy = ",sumy,", n = ",n),
+      ylab = "L(p|y's)",
+      from = 0,
+      to = 1)
+abline(v = 1/(sumy/n),
+       lwd = 2,
+       col = "blue")
+text(x = 0.53,
+     y = likelihood(0.21, sumy, n),
+     paste0("MLE occurs at ", signif(n/sumy, 4)))
+
+curve(loglikelihood(p, sumy = sumy, n = n), 
+      xname = "p", 
+      main = paste("Geom(p) Loglikelihood\nsumy = ",sumy,", n = ",n),
+      ylab = "ln(L(p|y's))",
+      from = 0, to = 1)
+abline(v = 1/(sumy/n),
+       lwd = 2,
+       col = "blue")
+text(x = 0.5,
+     y = loglikelihood(0.9, sumy, n),
+     paste0("MLE occurs at ", signif(n/sumy,4)),
+     cex = 0.8)
+
+```

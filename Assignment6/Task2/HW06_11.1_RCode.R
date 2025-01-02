@@ -1,0 +1,38 @@
+
+X1 <- c(1.1650, 0.6268, 0.0751, 0.3516)
+X2 <- c(0.3035, 2.6961, 1.0591, 2.7971, 1.2641)
+
+
+mean_X1 <- mean(X1)
+mean_X2<- mean(X2)
+
+meanX1X2 <- mean_X1 - mean_X2
+
+n1 <- length(X1)
+n2 <- length(X2)
+
+# Given variance 
+sigma_squared <- 1
+
+# Standard error of the difference of means for Z-test
+se <- sqrt(sigma_squared / n1 + sigma_squared / n2)
+
+# Z statistic 
+z_stat <- meanX1X2 / se
+
+# Two-sided p-value for the Z-test
+p_value <- 2 * pnorm(abs(z_stat), lower.tail = FALSE)
+
+# Pooled variance for part b
+var_X1 <- var(X1)
+var_X2 <- var(X2)
+pooled_variance <- (((n1 - 1) * var_X1) + ((n2 - 1) * var_X2)) / (n1 + n2 - 2)
+
+# Results
+cat("Mean of first set: ", mean_X1, "\n")
+cat("Mean of second set: ", mean_X2, "\n")
+cat("Difference of means: ", meanX1X2, "\n")
+cat("Pooled variance: ", pooled_variance, "\n")
+cat("Standard error of the difference of means: ", se, "\n")
+cat("Z-statistic: ", z_stat, "\n")
+cat("p-value: ", p_value, "\n")

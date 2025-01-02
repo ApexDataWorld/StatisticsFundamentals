@@ -1,0 +1,79 @@
+#Likelihood for a geom(p) RS is
+likelihood <- function(p, sumy, n){
+  ((p/(1-p))^n)*(1-p)^sumy
+}
+
+#logLikelihood for geom(p) RS is
+loglikelihood <- function(p, sumy, n){
+  n*log(p)-n*log(1-p)+sumy*log(1-p)
+}
+#Create plots for likelihood and loglikelihood for some different values of sumy
+par(mfrow=c(1,2))
+#create plots
+sumy <- 10
+n <- 10
+curve(loglikelihood(p, sumy = sumy, n = n),
+      xname = "p",
+      main = paste("Geom(p) Loglikelihood\nsumy = ",sumy,", n = ",n),
+      ylab = "L(p|y's)",
+      from = 0,
+      to = 1)
+abline(v = 1/(sumy/n),
+       lwd = 2,
+       col = "blue")
+text(x = 0.7,
+     y = loglikelihood(0.6, sumy, n),
+     paste0("MLE occurs at ", signif(n/sumy, 4)), 
+     cex = 0.8
+)
+#create plots
+sumy <- 20
+n <- 10
+curve(loglikelihood(p, sumy = sumy, n = n),
+      xname = "p",
+      main = paste("Geom(p) Loglikelihood\nsumy = ",sumy,", n = ",n),
+      ylab = "L(p|y's)",
+      from = 0,
+      to = 1)
+abline(v = 1/(sumy/n),
+       lwd = 2,
+       col = "blue")
+text(x = 0.7,
+     y = loglikelihood(0.6, sumy, n),
+     paste0("MLE occurs at ", signif(n/sumy, 4)), 
+     cex = 0.8
+)
+#create plots
+sumy <- 30
+n <- 10
+curve(loglikelihood(p, sumy = sumy, n = n),
+      xname = "p",
+      main = paste("Geom(p) Loglikelihood\nsumy = ",sumy,", n = ",n),
+      ylab = "L(p|y's)",
+      from = 0,
+      to = 1)
+abline(v = 1/(sumy/n),
+       lwd = 2,
+       col = "blue")
+text(x = 0.7,
+     y = loglikelihood(0.6, sumy, n),
+     paste0("MLE occurs at ", signif(n/sumy, 4)), 
+     cex = 0.8
+)
+#create plots
+sumy <- 200
+n <- 10
+curve(loglikelihood(p, sumy = sumy, n = n),
+      xname = "p",
+      main = paste("Geom(p) Loglikelihood\nsumy = ",sumy,", n = ",n),
+      ylab = "L(p|y's)",
+      from = 0,
+      to = 1)
+abline(v = 1/(sumy/n),
+       lwd = 2,
+       col = "blue")
+text(x = 0.7,
+     y = loglikelihood(0.6, sumy, n),
+     paste0("MLE occurs at ", signif(n/sumy, 4)), 
+     cex = 0.8
+)

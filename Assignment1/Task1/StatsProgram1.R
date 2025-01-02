@@ -1,0 +1,65 @@
+#set seed to get the same random values
+set.seed(391)
+#set the sample size
+n <- 10
+#set our true lambda value
+lambda <- 1
+
+#Generate data from a Poisson distribution with rpois
+sim_data <- rpois(n, lambda)
+sim_data
+
+#Now we find the value of our estimators
+lambda1 <- mean(sim_data)
+lambda2 <- mean(sim_data^2) - (mean(sim_data))^2
+lambda1
+lambda2
+
+#now repeat the process!
+N <- 10000 #number of estimates to find
+results <- replicate(N, {
+  sim_data <- rpois(n, lambda)
+  list(lambda1 = mean(sim_data), lambda2 = mean(sim_data^2) - (mean(sim_data))^2)
+})
+
+#check esimates
+results[, 1:6]
+results[1, 1:3]
+#unlist to get back in (atomic) vector form
+unlist(results[1, 1:6])
+lambda1 <- unlist(results[1,])
+lambda2 <- unlist(results[2,])
+
+#quick check on the SE of lambda1
+sd(lambda1)
+sqrt(lambda/n)
+
+#plot the values on a histogram to compare
+par(mfrow = c(1, 2))
+hist(lambda1, 
+     main = bquote(
+       atop(
+         ~ lambda[1] ~ " values with ", "true " ~ lambda ~ "=" ~ .(lambda) ~ " with n = " ~ .(n)
+       )
+     )
+)
+abline(v = lambda, 
+       col = "blue", 
+       lwd = 2)
+abline(v = mean(lambda1), 
+       col = "red", 
+       lwd = 2,
+       lty = "dashed")
+text(paste0("SE = ", round(sd(lambda1), 3)),
+     x = mean(lambda1) + 3*sd(lambda1), 
+     y = 1500, 
+     cex = 0.8)
+hist(lambda2, main = bquote(
+  atop(
+    ~ lambda[2] ~ " values with ", "true " ~ lambda ~ "=" ~ .(lambda) ~ " with n = " ~ .(n)
+  )
+)
+)
+abline(v = lambda, col = "blue", lwd = 2)
+abline(v = mean(lambda2), col = "red", lwd = 2, lty = "dashed")
+text(paste0("SE = ", round(sd(lambda2), 3)), x = mean(lambda2) + 3*sd(lambda2), y = 1500, cex = 0.8)
